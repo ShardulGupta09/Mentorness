@@ -1,0 +1,76 @@
+CREATE TABLE emp(
+	EMPID INT PRIMARY KEY,
+    NAME VARCHAR(50),
+    JOB VARCHAR(50),
+    SALARY INT
+);
+
+insert into emp (EMPID, NAME, JOB, SALARY)
+values
+(1, 'John', 'Manager', 90000),
+(2, 'Robert', 'Finance', 58000),
+(3, 'Ethan', 'Human Resource', 57000),
+(4, 'David', 'Human Resource', 54000),
+(5, 'Josh', 'Finance', 40000),
+(6, 'Betty', 'Human Resource', 34000),
+(7, 'Simon', 'Finance', 39000),
+(8, 'Toby', 'Business Analytics', 60000),
+(9, 'Harry', 'Finance', 24000),
+(10, 'Chris', 'Manager', 78000),
+(11, 'Theo', 'Business Analytics', 39000),
+(12, 'Henry', 'Human Resource', 46000),
+(13, 'George', 'Manager', 84000);
+
+--#1
+SELECT *,
+sum(salary) OVER(PARTITION BY job) as total_job_salary
+FROM emp;
+
+--#2
+select *,
+sum(salary) over(partition by job order by salary desc) as ordered_job_salary
+from emp;
+
+--#3
+select *,
+avg(salary) over(partition by job order by empid ROWS BETWEEN 1 preceding and current row) as running_total_job_salary
+from emp;
+
+--#4
+SELECT *,
+avg(salary) OVER(PARTITION BY job) as average_job_salary
+FROM emp;
+
+--#5
+SELECT *,
+COUNT(empid) OVER(PARTITION BY job) as Count_emp
+FROM emp;
+
+--#6
+select *,
+LEAD(salary, 1) Over(partition by job order by salary) as next_salary,
+LEAD(salary, 1) Over(partition by job order by salary) - salary as next_salary_diff
+from emp;
+
+--#7
+select *,
+LAG(salary, 1) Over(partition by job order by salary) as prev_salary,
+salary - LAG(salary, 1) Over(partition by job order by salary) as prev_salary_diff
+from emp;
+
+--#8
+select *, 
+ROW_NUMBER() over() as "row_number" 
+from emp;
+
+--#9
+select *, 
+ROW_NUMBER() over(partition by job order by salary) as "row_number",
+RANK() over(partition by job order by salary) as "rank_row",
+DENSE_RANK() over(partition by job order by salary) as "dense_rank_row"
+from emp;
+
+--#10
+select *, 
+NTILE(4) over(order by salary) as "quartile"
+from emp;

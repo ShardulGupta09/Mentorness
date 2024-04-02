@@ -1,0 +1,207 @@
+CREATE DATABASE mentorness;
+USE mentorness;
+
+-- Imported 5 tables in SQL using Table Data Import Wizard
+-- NOTE: Remember to change the data type of the following column to datetime "%d-%m-%Y" while importing the tables
+
+ALTER TABLE customers
+MODIFY COLUMN joining_date DATE;
+
+ALTER TABLE delivery_person
+MODIFY COLUMN joining_date DATE;
+
+ALTER TABLE orders
+MODIFY COLUMN order_date DATE;
+
+ALTER TABLE orders
+MODIFY COLUMN delivery_date DATE;
+
+#primary key
+ALTER table customers
+ADD PRIMARY KEY (cust_id);
+
+ALTER table delivery_person
+ADD PRIMARY KEY (delivery_person_id);
+
+ALTER table orders
+ADD PRIMARY KEY (order_id,order_type(20));
+
+ALTER table pincode
+ADD PRIMARY KEY (pincode);
+
+ALTER table products
+ADD PRIMARY KEY (Product_id);
+
+#Foreign Keys
+ALTER TABLE customers
+ADD CONSTRAINT pincodessss
+FOREIGN KEY (primary_pincode) REFERENCES pincode (pincode);
+
+ALTER TABLE delivery_person
+ADD CONSTRAINT Primary_pincode
+FOREIGN KEY (pincode) REFERENCES pincode (pincode);
+
+ALTER TABLE orders
+ADD CONSTRAINT Customer_id
+FOREIGN KEY (cust_id) REFERENCES customers (cust_id);
+
+ALTER TABLE orders
+ADD CONSTRAINT Delivery_person_id
+FOREIGN KEY (delivery_person_id) REFERENCES delivery_person (delivery_person_id);
+
+ALTER TABLE orders
+ADD CONSTRAINT Primary_pincode
+FOREIGN KEY (delivery_pincode) REFERENCES pincode (pincode);
+
+ALTER TABLE orders
+ADD CONSTRAINT Product_id
+FOREIGN KEY (product_id) REFERENCES products (product_id);
+
+#question 1
+SELECT COUNT(dob) AS blank_count
+FROM customers
+WHERE dob = '' OR dob IS NULL;
+
+#question 2
+SELECT primary_pincode, gender, count(cust_id) AS count_customer
+FROM customers
+GROUP BY primary_pincode ,gender;
+
+#question 3
+SELECT product_name, mrp
+FROM products
+WHERE mrp > 50000;
+
+#question 4
+SELECT pincode, count(delivery_person_id) AS count_person
+FROM delivery_person
+GROUP BY pincode;
+
+#question 5
+SELECT delivery_pincode, count(order_id) AS count_order, sum(total_amount_paid) AS total_paid,
+	avg(total_amount_paid) AS avg_paid, max(total_amount_paid) AS max_paid,
+    min(total_amount_paid) AS min_paid
+FROM orders
+WHERE payment_type = "cash" AND order_type = "buy"
+GROUP BY delivery_pincode;
+
+#Question 6
+SELECT delivery_person_id, count(order_id) AS count_order, sum(total_amount_paid)
+FROM orders
+WHERE product_id = 12350 OR product_id = 12348 AND tot_units > 8 AND order_type = "buy"
+GROUP BY delivery_person_id
+ORDER BY sum(total_amount_paid) DESC;
+
+#Question 7
+SELECT concat(first_name, ' ', last_name) as full_name, email
+FROM customers
+WHERE email LIKE "%gmail.com";
+
+#Question 8
+SELECT delivery_pincode, avg(total_amount_paid) AS avg_paid
+FROM orders
+WHERE order_type = "buy"
+GROUP BY delivery_pincode
+HAVING avg(total_amount_paid) > 150000;
+
+#Question 9
+SELECT order_date, DAY(order_date), MONTH(order_date), YEAR(order_date)
+FROM orders;
+
+#Question 10
+SELECT MONTH(order_date) AS Months, count(order_id) AS tot_orders, 
+	count(CASE WHEN order_type = "return" THEN order_id END) AS total_returns, 
+    count(CASE WHEN order_type = "return" THEN order_id END)*100/count(order_id) AS Percent_return_orders
+FROM orders
+GROUP BY MONTH(order_date);
+
+#Question 11
+SELECT p.brand, sum(tot_units) AS total_units_sold,
+	sum(CASE WHEN o.order_type = "return" THEN o.tot_units END) AS total_returns
+FROM orders o
+JOIN products p ON o.product_id = p.product_id 
+GROUP BY p.brand;
+
+#Question 12
+SELECT p.state, COUNT(DISTINCT c.cust_id) AS distinct_customers, 
+	COUNT(DISTINCT d.delivery_person_id) AS distinct_delivery_boys
+FROM pincode p
+JOIN customers c ON p.pincode = c.primary_pincode
+JOIN delivery_person d ON p.pincode = d.pincode
+GROUP BY p.state;
+
+#Question 13
+SELECT o.cust_id, sum(o.tot_units), 
+	sum(CASE WHEN c.primary_pincode = o.delivery_pincode THEN o.tot_units else 0 END) AS primary_units_ordered,
+    sum(CASE WHEN c.primary_pincode <> o.delivery_pincode THEN o.tot_units else 0 END) AS non_primary_units_ordered,
+    sum(CASE WHEN c.primary_pincode = o.delivery_pincode THEN o.tot_units else 0 END)*100/sum(o.tot_units) AS perc_primary_units_ordered
+FROM orders o
+JOIN customers c ON o.cust_id = c.cust_id
+GROUP by o.cust_id
+ORDER BY perc_pArimary_units_ordered DESC;
+use mentorness;
+#Question 14
+SELECT p.product_name, sum(o.tot_units) AS total_units, 
+	sum(o.total_amount_paid) AS sum_amount_paid, 
+    sum(o.displayed_selling_price_per_unit) AS sum_disp_selling_price,
+    sum(p.mrp) AS total_mrp,
+    round(100 - ((100*avg(o.total_amount_paid))/ avg(o.displayed_selling_price_per_unit*o.tot_units)),2) AS net_disc_selling_price,
+    round(100 - ((100*avg(o.total_amount_paid))/ avg(p.mrp*o.tot_units)),2) AS net_discount_from_mrp
+FROM orders o
+JOIN products p ON p.product_id = o.product_id
+GROUP BY p.product_name;
+
+#Question 15
+SELECT o.order_id, p.product_name, 
+	round(100 - ((100*avg(o.total_amount_paid))/ avg(o.displayed_selling_price_per_unit*o.tot_units)),2) AS net_disc_selling_price
+FROM orders o
+JOIN products p ON p.product_id = o.product_id
+WHERE o.order_type <> "return" 
+GROUP BY order_id, product_name
+HAVING net_disc_selling_price > 10.10
+ORDER BY net_disc_selling_price DESC;
+
+#Question 16
+SELECT p.category, 
+	(sum(o.total_amount_paid)-sum(p.procurement_cost_per_unit*o.tot_units)) AS absolute_profit,
+    100*(sum(o.total_amount_paid)/sum(p.procurement_cost_per_unit*o.tot_units)) -100 AS Per_profit
+FROM orders o
+JOIN products p ON p.product_id = o.product_id
+GROUP BY p.category;
+
+#Question 17
+SELECT d.name, count(o.order_id), 
+	SUM(CASE WHEN MONTH(order_date) = 1 THEN 1 ELSE 0 END) AS Jan,
+    SUM(CASE WHEN MONTH(order_date) = 2 THEN 1 ELSE 0 END) AS Feb,
+    SUM(CASE WHEN MONTH(order_date) = 3 THEN 1 ELSE 0 END) AS Mar,
+    SUM(CASE WHEN MONTH(order_date) = 4 THEN 1 ELSE 0 END) AS Apr,
+    SUM(CASE WHEN MONTH(order_date) = 5 THEN 1 ELSE 0 END) AS May,
+    SUM(CASE WHEN MONTH(order_date) = 6 THEN 1 ELSE 0 END) AS Jun,
+    SUM(CASE WHEN MONTH(order_date) = 7 THEN 1 ELSE 0 END) AS Jul,
+    SUM(CASE WHEN MONTH(order_date) = 8 THEN 1 ELSE 0 END) AS Aug,
+    SUM(CASE WHEN MONTH(order_date) = 9 THEN 1 ELSE 0 END) AS Sep,
+    SUM(CASE WHEN MONTH(order_date) = 10 THEN 1 ELSE 0 END) AS Oct,
+    SUM(CASE WHEN MONTH(order_date) = 11 THEN 1 ELSE 0 END) AS Nov,
+    SUM(CASE WHEN MONTH(order_date) = 12 THEN 1 ELSE 0 END) AS `Dec`
+FROM orders o
+JOIN delivery_person d ON o.delivery_person_id = d.delivery_person_id
+WHERE order_type <> "return"
+GROUP BY d.name;
+
+#Question 18
+SELECT p.product_name, c.gender,
+	(sum(o.total_amount_paid)-sum(p.procurement_cost_per_unit*o.tot_units)) AS absolute_profit,
+    100*(sum(o.total_amount_paid)/sum(p.procurement_cost_per_unit*o.tot_units)) -100 AS Per_profit
+FROM orders o
+JOIN products p ON p.product_id = o.product_id
+JOIN customers c ON c.cust_id = o.cust_id
+GROUP BY c.gender, p.product_name;
+
+#Question 19
+SELECT p.product_name, o.tot_units, 
+	round(100 - ((100*avg(o.total_amount_paid))/ avg(o.displayed_selling_price_per_unit*o.tot_units)),2) AS net_disc_selling_price
+FROM orders o
+JOIN products p ON p.product_id = o.product_id
+WHERE p.product_name = "Dell AX420" AND order_type = "buy"
+GROUP BY p.product_name,o.tot_units 
+ORDER BY tot_units DESC;
